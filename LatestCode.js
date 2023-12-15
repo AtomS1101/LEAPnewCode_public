@@ -5,8 +5,8 @@ const data = new Request(verUrl);
 const latestVer = await data.loadString();
 console.log(latestVer);
 
-const data = new Request(codeUrl);
-const codeString = await data.loadString();
+const codeData = new Request(codeUrl);
+const codeString = await codeData.loadString();
 
-const fm = FileManager.local()
-fm.writeString(module.filename, codeString)
+const fm = FileManager.local();
+fm.writeString(module.filename, codeString);
