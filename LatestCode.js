@@ -3,6 +3,7 @@
 // icon-color: cyan; icon-glyph: user-check;
 
 //replaced
+new!
 const verUrl = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestVersion.txt";
 const codeUrl= "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestCode.js";
 const data = new Request(verUrl);
