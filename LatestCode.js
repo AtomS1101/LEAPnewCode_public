@@ -3,7 +3,7 @@
 // icon-color: cyan; icon-glyph: user-check;
 
 //replaced
-const version = "4.1"; //version of this code
+const version = "4.0"; //version of this code
 const date = "12/08/23";
 const containData = false;
 const fullscreen = false;
