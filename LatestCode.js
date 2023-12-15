@@ -72,7 +72,7 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
   const selected = await MakeAlert(
     "sheet",
     ["Menu", null],
-    {n1:"新バージョン確認", n2:"アップデート履歴", n3:"使い方を見る", c4:"Cancel"},
+    {n1:"新バージョンの確認", n2:"アップデート履歴", n3:"使い方を見る", c4:"Cancel"},
     []);
   switch(selected[1]){
     case 0:
@@ -540,7 +540,7 @@ async function checkLatestVer(){
   if(latestVer != version){
     let acceptUpdate = await MakeAlert(
       "alert",
-      ["新しいバージョンがあります!", `新バージョン: ${latestVer}\n今すぐアップデートしますか？\nアップデートは数秒で終わります。`],
+      ["新しいバージョンがあります!", `新しいバージョン: ${latestVer}\n今すぐアップデートしますか？\nアップデートは数秒で終わります。`],
       {n1:"今すぐアップデート", n2:"後で"}, []);
     if(acceptUpdate[1] == 0){
       const codeData = new Request(codeUrl);
@@ -549,7 +549,7 @@ async function checkLatestVer(){
       //fm.writeString(module.filename, codeString);
       await MakeAlert(
         "alert",
-        ["アップデートが正常にされました。", `バージョン: ${version}\nコードを開いている場合はDoneをタップして閉じてください。`],
+        ["アップデートが正常にされました。", `バージョン: ${latestVer}\nコードを開いている場合はDoneをタップして閉じてください。`],
         {c1:"OK"}, []);
     }
   } else{
