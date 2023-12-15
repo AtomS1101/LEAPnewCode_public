@@ -1,9 +1,5 @@
-// Variables used by Scriptable.
-// These must be at the very top of the file. Do not edit.
-// icon-color: cyan; icon-glyph: user-check;
-
 //replaced
-const version = "4.0"; //version of this code
+const version = "4.1"; //version of this code
 const date = "12/08/23";
 const containData = false;
 const fullscreen = false;
@@ -538,12 +534,29 @@ async function checkLatestVer(){
   const codeUrl = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestCode.js";
   const data = new Request(verUrl);
   const latestVer = String(await data.loadString());
-  console.log(latestVer);
+  console.log("latest : " + latestVer);
+  console.log("this code: "+ version);
+  
   if(latestVer != version){
-    const codeData = new Request(codeUrl);
-    const codeString = await codeData.loadString();
-    const fm = FileManager.local();
-    //fm.writeString(module.filename, codeString);
+    let acceptUpdate = await MakeAlert(
+      "alert",
+      ["新しいバージョンがあります!", `新バージョン: ${latestVer}\n今すぐアップデートしますか？\nアップデートは数秒で終わります。`],
+      {n1:"今すぐアップデート", n2:"後で"}, []);
+    if(acceptUpdate[1] == 0){
+      const codeData = new Request(codeUrl);
+      const codeString = await codeData.loadString();
+      const fm = FileManager.local();
+      //fm.writeString(module.filename, codeString);
+      await MakeAlert(
+        "alert",
+        ["アップデートが正常にされました。", `バージョン: ${version}\nコードを開いている場合はDoneをタップして閉じてください。`],
+        {c1:"OK"}, []);
+    }
+  } else{
+    await MakeAlert(
+      "alert",
+      ["バージョンは最新です。", `バージョン: ${version}`],
+      {c1:"OK"}, []);
   }
 }
 
