@@ -1,11 +1,10 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: blue; icon-glyph: graduation-cap;
-const version = "4.1";
-const date = "12/19/23";
+// icon-color: orange; icon-glyph: magic;
+const version = "4.2";
+const date = "12/25/23";
 const containData = true;
 const fullscreen = false;
-
 /*
 The documentation of the function is on GitHub and iMarkdown.
 */
@@ -13,23 +12,31 @@ const fm = FileManager.local();
 
 const data = getJSON();
 
-let table = new UITable();
+let Input;
+const table = new UITable();
 
 await checkVersion(); //what's new
-
-let Input;
-Input = [true, String(args.shortcutParameter)];
-
-if(Input[1] == "null"){ //string型になってるいるので""が必要
-  Input = await MakeAlert(
-    "text",
-    ["検索🔍","番号, 単語, 意味または範囲を入力。\n範囲指定方法(開始, 終了)"],
-    {n1:"OK", n2:"Menu", c3:"Cancel"},
-    ["単語 or 番号...", null]);
+Input = [true, String(args.shortcutParameter)]; //ShortCutからの入力
+if(args.widgetParameter == "leap"){
+  Input = [true, String(getRandomNum())];
 }
-console.log(`mode [${Input}]`)
 
-let IsNum = /^\d+$/;
+if(!config.runsInWidget){ //アプリから実行
+  if(Input[1] == "null"){ //string型になってるいるので""が必要
+    Input = await MakeAlert(
+      "text",
+      ["検索🔍","番号, 単語, 意味または範囲を入力。\n範囲指定方法(開始, 終了)"],
+      {n1:"OK", n2:"Menu", c3:"Cancel"},
+      ["単語 or 番号...", null]
+    );
+  }
+  console.log(`mode [${Input}]`);
+} else{ //widgetから実行
+  showWidget();
+  Input =  [false, "cancel"];
+}
+
+const IsNum = /^\d+$/;
 if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
   Input = Input[1].toLowerCase(); //小文字化 & 配列から文字列化
   //数字
@@ -42,11 +49,11 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
     start = temp[0];
     end = temp[1];
     if(temp){
-      let mode = await MakeAlert(
+      const mode = await MakeAlert(
         "sheet",
         ["表示方法を選択", `No.${start} ~ ${end} の単語を表示します。`],
-        {n1:"すべて表示", n2:"ランダムに問題を出題", c3:"cancel"}, []);
-      
+        {n1:"すべて表示", n2:"ランダムに問題を出題", c3:"cancel"}, []
+      );
       switch(mode[1]){
         case 0:
           range(start, end); break;
@@ -56,8 +63,8 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
           var now = 0;
           quiz(start, end);
           break;
-      } 
-    }
+      } //switch
+    } //if
   //単語
   } else{
     word(Input);
@@ -66,8 +73,9 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
   const selected = await MakeAlert(
     "sheet",
     ["Menu", null],
-    {n1:"アップデートの確認", n2:"バージョン履歴", n3:"使い方を見る", c4:"Cancel"},
-    []);
+    {n1:"アップデートの確認", n2:"バージョン履歴", n3:"アプリの詳細", n4:"使い方を見る", c4:"Cancel"},
+    []
+  );
   switch(selected[1]){
     case 0:
       checkLatestVer();
@@ -76,20 +84,24 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
       versionHis();
       break;
     case 2:
-      help();
+      showDetail();
+      break;
+    case 3:
+      showHelp();
       break;
   }
 } else{
   //cancel action
 }
-Script.complete();
+// Script.complete();
 //========================================
 async function CheckRange(num){
   if(num < 1 || num > 1935){
     await MakeAlert(
       "alert",
       ["⚠️Error", "範囲外の数値です。\n1〜1935の範囲内で指定してください。"],
-      {n1:"OK"}, []);
+      {n1:"OK"}, []
+    );
     return false;
   } else {
     return true;
@@ -99,17 +111,12 @@ async function CheckRange(num){
 async function ConvRange(Input){
   Input = Input.replace(/ /g, "");
   Input = Input.replace(/　/g, "");
-  let idx;
-  if(Input.includes(",")){
-    idx = Input.indexOf(",");
-  } else{
-    idx = Input.indexOf("、");
-  }
+  const idx = (Input.includes(",") ? Input.indexOf(",") : Input.indexOf("、"));
   let start, end;
   start = parseInt(Input.slice(0, idx));
   end = parseInt(Input.slice(idx+1, Input.length));
   if(end < start){  //範囲逆転
-    let temp = start;
+    const temp = start;
     start = end;
     end = temp;
   }
@@ -124,7 +131,12 @@ async function ConvRange(Input){
 async function number(Input){
   if(await CheckRange(Input)){
     let temp = [(data[Input-1][0]), data[Input-1][1]];
-    MakeBlock(Input, temp[0], temp[1], false);
+    MakeBlock(
+      Input,
+      temp[0],
+      temp[1],
+      false
+    );
     table.present(fullscreen);
   }
 }
@@ -135,10 +147,13 @@ function range(start, end){
       i + 1,
       data[i][0],
       data[i][1],
-      true);
+      true
+    );
   }
-  MakeRow({tr1:[[null, false, null, 0], [`${end-start+1} 単語`, false, null, 15]]},
-    [false, false, null], 70, null);
+  MakeRow(
+    {tr1:[[null, false, null, 0], [`${end-start+1} 単語`, false, null, 15]]},
+    [false, false, null], 70, null
+  );
   table.present(fullscreen);
 }
 
@@ -155,16 +170,27 @@ function word(Input){
   for(let i=0; i<1935; i++){
     if(data[i][0] == Input){
       flg = true;
-      MakeBlock(i+1, data[i][0], data[i][1], false);
-      MakeRow({br1:["Webで検査🔍", 1]},
-        [false, false, null], 70, null);
+      MakeBlock(
+        i+1,
+        data[i][0],
+        data[i][1],
+        false
+      );
+      MakeRow(
+        {br1:["Webで検査🔍", 1]},
+        [false, false, null], 70, null
+      );
       break;
     } else{
       for(let mean of (data[i][1])){
         if(mean.includes(Input)){
           flg = true;
           count++
-          MakeBlock(i+1, data[i][0], data[i][1], true);
+          MakeBlock(
+            i+1,data[i][0],
+            data[i][1],
+            true
+          );
           break;   //2重検知防止
         }   //if
       }   //for
@@ -172,81 +198,76 @@ function word(Input){
   }   //for
   
   if(!flg){
-    MakeRow({tl1:[["検索結果なし", true, null, 20], [`\n"${Input}" は、見出し語に見つかりませんでした。`, false, null, 15]]},
-      [false, false, null], 100, null);
-    MakeRow({br1:["かわりにWebで検索🔍", 1]},
-      [false, false, null], 90, null);
+    MakeRow(
+      {tl1:[["検索結果なし", true, null, 20], [`\n"${Input}" は、見出し語に見つかりませんでした。`, false, null, 15]]},
+      [false, false, null], 100, null
+    );
+    MakeRow(
+      {br1:["かわりにWebで検索🔍", 1]},
+      [false, false, null], 90, null
+    );
   } else if(count != 0){
-    MakeRow({tr1:[[null, false, null, 0], [`${count} 単語ヒット`, false, null, 15]]},
-      [false, false, null], 80, null);
-    MakeRow({br1:["Webで検索🔍", 1]},
-      [false, false, null], 100, null);
+    MakeRow(
+      {tr1:[[null, false, null, 0], [`${count} 単語ヒット`, false, null, 15]]},
+      [false, false, null], 80, null
+    );
+    MakeRow(
+      {br1:["Webで検索🔍", 1]},
+      [false, false, null], 100, null
+    );
   }
   table.present(fullscreen);
 }
-// help
-function help(){
-  const help = getHelp();
-  MakeRow({tl1:[["<使い方⚙️>", true, null, 30], [null, false, null, 0]]},
-    [false, false, null], 50, null);
-  for(let item in help){
-    if(item != "version"){
-      MakeRow({tl1:[[item, true, null, 20], [help[item], false, null, 14]]},
-        [true, false, null], 120, null);
-    } else{
-      MakeRow({tl1:[[null, false, null, 0], [help[item], false, null, 12]]},
-        [false, false, null], 100, null);
-    }
-  }
-  table.showSeparators = true;
-  table.present(fullscreen);
-}
+
 //===========Button action================
 async function BtnWeblio(){
   table.removeAllRows();
-  MakeRow({tl1:[["検索中...", true, null, 20], ["インターネットに接続してください...", true, null, 15]]},
-    [false, false, null], 100, null);
+  MakeRow(
+    {tl1:[["検索中...", true, null, 20], ["インターネットに接続してください...", false, null, 15]]},
+    [false, false, null], 100, null
+  );
   table.reload();
-  let wordInURL = Input.replace(/ /g, "+");
-  let url = `https://ejje.weblio.jp/content/${wordInURL}`;
-  let data = new Request(url);
-  let html = await data.loadString();
-  
-  const FormCheck = [
-    `<meta name="description" content="「${Input}」の意味・翻訳・日本語 -`,
-    `<meta name="description" content="｢${Input}｣は英語でどう表現する？`,
-    `<meta name="description" content="${Input}を英語で訳すと`,
-    `<meta name="description" content="${Input}の意味や使い方`,
-    `<meta name="description" content="${Input}`];
-  const Format = [
-    `<meta name="description" content="「${Input}」の意味・翻訳・日本語 - (.*?)｜Weblio英和・和英辞書">`,
-    `<meta name="description" content="｢${Input}｣は英語でどう表現する？(.*?) - 1000万語以上収録！英訳・英文・英単語の使い分けならWeblio英和・和英辞書">`,
-    `<meta name="description" content="${Input}を英語で訳すと (.*?) - 約865万語ある英和辞典・和英辞典。発音・イディオムも分かる英語辞書。">`,
-    `<meta name="description" content="${Input}の意味や使い方 (.*?) - 約865万語ある英和辞典・和英辞典。発音・イディオムも分かる英語辞書。">`,
-    `<meta name="description" content="${Input}(.*?)- 1000万語の英語の意味を収録！Weblio英和・和英辞書">`];
-  
-  let mean = false;
-  let i;
-  for(i = 0; i < FormCheck.length; i++){
-    if(html.includes(FormCheck[i])){
-      mean = html.match(Format[i]);
+
+  const url = `https://ejje.weblio.jp/content/${Input.replace(/ /g, "+")}`;
+  const data = new Request(url);
+  const html = await data.loadString();
+  const FormatType = [
+    "content-explanation  ej",
+    "content-explanation  je",
+    "bubble"
+  ];
+  let mean;
+  for(let className of FormatType){
+    const format = `<span class="${className}">`;
+    if(html.includes(format)){
+      if(className == "bubble"){
+        mean = [null, "見出し後に見つかりませんでした。"];
+        break;
+      }
+      const formatType = `${format}\n(.*?)<`;
+      mean = await html.match(formatType);
       break;
     }
   }
-  if(!mean) mean = [null, "見つかりませんでした。"];
-  //matchしたけれど空白だった場合
-  if(mean[1].replace(/ /g, "") == "") mean = [null, "見つかりませんでした。"];
-  mean = mean[1].replace(/【/g, "\n【");
-  mean = mean.replace(/、/g, "\n");
-  mean = mean.replace(/,/g, "\n");
-  mean = mean.split("\n");
+  mean = mean[1].replace(/ /g, "");
+  mean = mean.replace(/;/g, "/");
+  mean = mean.replace(/、/g, "/");
+  mean = mean.split("/");
   table.removeAllRows();
-  MakeBlock(" [Not LEAP]", Input, mean, true);
-  MakeRow({tr1:[[null, false, null, 0], ["Weblio英和和英辞典より。", false, null, 16]]},
-    [false, false, null], 60, null);
-  MakeRow({tl1:[[null, false, null, 0], [`HTML format : ${i + 1}`, false, null, 10]],
-    br1:["サイトを表示する", 2]},
-    [false, false, null], 50, null);
+  MakeBlock(
+    " [Not LEAP]",
+    Input,
+    mean,
+    true
+  );
+  MakeRow(
+    {tr1:[[null, false, null, 0], ["Weblio英和和英辞典より。", false, null, 13]]},
+    [false, false, null], 40, null
+  );
+  MakeRow(
+    {br1:["サイトを表示する", 2]},
+    [false, false, null], 50, null
+  );
   table.reload();
 }
 
@@ -255,8 +276,7 @@ function BtnSpeak(word){
 }
 
 function BtnOpenSite(){
-  let wordInURL = Input.replace(/ /g, "+");
-  let url = `https://ejje.weblio.jp/content/${wordInURL}`;
+  const url = `https://ejje.weblio.jp/content/${Input.replace(/ /g, "+")}`;
   Safari.openInApp(url, false);
 }
 
@@ -352,7 +372,7 @@ async function MakeAlert(mode, message, action, txtValue){
 
 function MakeRow(dic, select, height, background){
               //({}, [],      int,   str)
-  let row = new UITableRow();
+  const row = new UITableRow();
   for(let item in dic){
     if(dic.hasOwnProperty(item)){
       let content;
@@ -410,11 +430,7 @@ function MakeBlock(num, word, mean, sep){
   let withNum = [];
   for(let i=0; i<mean.length; i++){
     if(mean[i]){ // nullではない場合
-      if(mean[i] != "答えを表示"){
-        withNum.push(`${i+1}, ${mean[i]}`);
-      } else{
-        withNum.push(mean[i]);
-      }
+      withNum.push(mean[i]!="答えを表示" ? `${i+1}, ${mean[i]}` : mean[i]);
     }
   }
   MakeRow({tl1:[[`No.${num}`, false, null, 19], [null, false, null, 0]]},
@@ -449,9 +465,9 @@ function Progress(total, havegone){
   context.opaque=false;
   context.respectScreenScale=true;
   for(let i=0; i<2; i++){
-    let backC = (Device.isUsingDarkAppearance() ? "#474747" : "#C2C2C2");
-    let color = (i==0 ? backC : "#3A80F3");
-    let wid = (i==0 ? 500 : 500*havegone/total);
+    const backC = (Device.isUsingDarkAppearance() ? "#474747" : "#C2C2C2");
+    const color = (i==0 ? backC : "#3A80F3");
+    const wid = (i==0 ? 500 : 500*havegone/total);
     context.setFillColor(new Color(color));
     const path = new Path();
     path.addRoundedRect(new Rect(0, 0, wid, 5), 3, 2);
@@ -462,7 +478,7 @@ function Progress(total, havegone){
 }
 
 //========================================
-function getHelp(){
+function showHelp(){
   const help = {
     "✔︎ 単語検索" :"LEAPの番号、単語を入力して調べる。",
     "✔︎ 意味から検索" :"単語の意味から検索する。検索結果は当てはまる意味を含む単語が一覧で表示される。",
@@ -470,16 +486,26 @@ function getHelp(){
     "✔︎ 発音を確認する" :"単語右の「🔊Speak」ボタンをタップして発音を確認。",
     "✔︎ ︎Webから検索" :"単語を検索し、右下の「Webで検索🔍」を選ぶことでインターネットから意味を検索できる。「サイトを表示する」をタップすると、Webページを確認できる。",
     "✔︎ 暗記テスト" :"範囲を入力し、「ランダムに出題」を選択すると、範囲内の単語をクイズ形式で確認できる。[答えを表示]をタップして意味を表示する。",
-    version :`ver : ${version}\nDate : ${date}\ncontain json : ${containData}`};
-  return help;
+    "✔︎ widget" :"step1:\n ホーム画面編集の画面にする。\nstep2:\n プラスボタンを押してscriptableアプリのwidgetを追加。\nstep3:\n 編集画面のままwidgetをタッチし、scriptからLEAPを選択。\nstep4:\n 下の項目から「Run script」を選択し、Parameterに小文字で「leap」と入力。"
+  };
+  MakeRow({tl1:[["<使い方⚙️>", true, null, 30], [null, false, null, 0]]},
+    [false, false, null], 50, null);
+  for(let item in help){
+    if(item != "version"){
+      MakeRow({tl1:[[item, true, null, 20], [help[item], false, null, 14]]},
+        [true, false, null], help[item].length + 80, null);
+    }
+  }
+  table.showSeparators = true;
+  table.present(false);
 }
 
 async function checkVersion(){
   const firstRunKey = `version${version}`;  //使用済みのキー
   if(!Keychain.contains(firstRunKey)) {
     const newThing = [
-    "✔︎ Menuボタンを追加しました。",
-    "✔︎ Menuから自動アップデートできるようになりました。",
+    "✔︎ Menuにアプリ詳細画面を追加しました。",
+    "✔︎ ホームのwidgetからバージョンと、ランダムな単語を確認できるようになりました。\nparameterには小文字半角で「leap」と入力してください。",
     "✔︎ その他マイナーなアップデート。"];
     MakeRow({tl1:[["What's New✨", true, null, 40], [null, false, null, 10]]},
       [false, false, null], 60, null);
@@ -487,73 +513,177 @@ async function checkVersion(){
       MakeRow({tl1:[[null, false, null, 0], [item, false, null, 15]]},
         [false, false, null], 60, null);
     }
-    MakeRow({tr1:[[null, false, null, 0], ["この内容はいつでも\n[Menu] → [バージョン履歴]\nから確認することができます。"]]},
+    MakeRow({tr1:[[null, false, null, 0], ["この内容はいつでも\n[Menu] → [バージョン履歴]\nから確認することができます。", false, null, 0]]},
       [false, false, null], 350, null);
     Keychain.set(firstRunKey, "true");
-    await table.present(false)
+    await table.present(false);
     table.removeAllRows();
   }
   //Keychain.remove(firstRunKey);
 }
 
-function versionHis(){
-  const versionHistory = {
-  "v4.1": "1. GitHub rawデータから自動アップデートに対応。\n2. 起動時の[使い方を見る]を[Menu]に変更し各機能をMenuに格納。\n\ndate: 12/18/23",
-  "v4.0": "1. ランダム出題で進捗バーの表示。\n2. ランダム出題でボタンの位置固定化。\n3. JSONの修正によりデータ軽減。\n4. SiriShortcutからの数字入力で発生するエラーの修正。\n5. 一部のUI、その他マイナーなアップデート。\n\ndate: 12/08/23",
-  "v3.2": "1. 辞書データの誤字の修正。\n\ndate: 10/24/23",
-  "v3.1": "1. 単語の意味が長文の場合に表示が見切れるバグの修正。\n\ndate: 10/15/2",
-  "v3.0": "1. 範囲を指定してランダムに問題を表示。\n\ndate: 10/15/23",
-  "v2.1": "1. 表示可能なWeblioのHTMLフォーマット追加。\n\ndate: 10/04/23",
-  "v2.0": "1. 単語見出しの強調表示\n2. 掲載のない単語をWeblioから検索。\n\ndate: 10/03/23",
-  "v1.4": "1. SiriShortcutからの入力に対応。\n2. 大文字を含む入力に対応。\n\ndate: 10/01/23",
-  "v1.3": "1. 検索ヒット数の表示、versionの確認。\n\ndate: 09/28/23",
-  "v1.2": "1. 起動時に使い方, ヘルプの表示。\n\ndate: 09/27/23",
-  "v1.1": "1. 日本語入力で意味からの検索に対応。\n\ndate: 09/27/23",
-  "v1.0": "1. 単語, 番号, 範囲から検索。\n\ndate: 09/26/23"};
-  const checkVersionTable = new UITable();
-  for(let item in versionHistory){
-    const row = new UITableRow();
-    row.addText(item, versionHistory[item]);
-    row.height = versionHistory[item].split("\n").length * 40;
-    checkVersionTable.addRow(row);
+async function versionHis(){
+  const historyURL = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/VersionHistory.json";
+  const historyData = new Request(historyURL);
+  const versionHistory = await historyData.loadJSON();
+  const sortedObject = Object.fromEntries(
+    Object.entries(versionHistory).sort(([keyA], [keyB]) => keyB.localeCompare(keyA))
+  );
+  for(let item in sortedObject){
+    const height = versionHistory[item][1].split("\n").length * 40;
+    MakeRow(
+      {tl1:[[item, false, null, 17], [null, false, null, 15]],
+      tr2:[[null, false, null, 0], [versionHistory[item][0], false, null, 15]]},
+      [false, false, null], 30, null
+    );
+    MakeRow(
+      {tl1:[[item, false, null, 0],[versionHistory[item][1], false, null, 15]],},
+      [false, false, null], height, null
+    );
+    MakeRow(
+      {tc1:[[null, false, null, 0], ["-".repeat(53), false, "#606060", null]]},
+      [false, false, null], 20, null
+    );
   }
-  checkVersionTable.showSeparators = true;
-  checkVersionTable.present(false);
+  table.present(false);
+}
+
+async function showDetail(){
+  const detail = {
+    "App Version":version,
+    "Updated day":date,
+    "LEAP data included":containData,
+    "Size":`${await FileManager.local().fileSize(module.filename)} KB`,
+    "Length of code":`${
+      (await FileManager.local().readString(module.filename)).length
+    } characters`
+  }
+  for(let item in detail){
+    MakeRow({tl1:[[item, true, null, 17], [null, false, null, 0]],
+      tr2:[[`${detail[item]}`, false, null, 17], [null, false, null, 0]]},
+      [false, false, null], 50, null);
+  }
+  table.showSeparators = true;
+  table.present(false);
 }
 
 async function checkLatestVer(){
-  await MakeAlert(
-    "alert",
-    ["新しいバージョンの確認", "インターネットに接続してください。途中で接続を切ったりアプリを閉じたりしないでください。"],
-    {n1:"OK"}, []);
-  const verUrl  = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestVersion.txt";
   const codeUrl = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestCode.js";
-  const data = new Request(verUrl);
-  const latestVer = String(await data.loadString());
-  console.log("latest : " + latestVer);
+  const latestVer = await checkRequest();
+  console.log("latest : " + latestVer[0]);
   console.log("this code: "+ version);
   
-  if(latestVer != version){
+  if(latestVer[1]){
     let acceptUpdate = await MakeAlert(
       "alert",
-      ["新しいバージョンがあります!", `新しいバージョン: ${latestVer}\n今すぐアップデートしますか？\nアップデートは数秒で終わります。`],
-      {n1:"今すぐアップデート", n2:"後で"}, []);
+      ["新しいバージョンがあります!", `新しいバージョン: v${latestVer[0]}\n今すぐアップデートしますか？\nアップデートは数秒で終わります。`],
+      {n1:"今すぐアップデート", n2:"後で"}, []
+    );
     if(acceptUpdate[1] == 0){
+      await MakeAlert(
+        "alert",
+        ["", "インターネットに接続してください。\n途中で接続を切ったりアプリを閉じたりしないでください。"],
+        {n1:"OK"}, []
+      );
       const codeData = new Request(codeUrl);
       const codeString = await codeData.loadString();
       const fm = FileManager.local();
       fm.writeString(module.filename, codeString);
       await MakeAlert(
         "alert",
-        ["アップデートが正常に行われました。", `バージョン: ${latestVer}\nコードを開いている場合は閉じてください。`],
-        {c1:"OK"}, []);
+        ["アップデートが正常に行われました。", `バージョン: ${latestVer[0]}\nコードを開いている場合は閉じてください。`],
+        {c1:"OK"}, []
+      );
     }
   } else{
     await MakeAlert(
       "alert",
-      ["バージョンは最新です。", `バージョン: ${version}`],
-      {c1:"OK"}, []);
+      ["バージョンは最新です。", `バージョン: ${version[0]}`],
+      {c1:"OK"}, []
+    );
   }
+}
+
+async function checkRequest(){
+  const verUrl  = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestVersion.txt";
+  const req = new Request(verUrl);
+  const latestVer = parseFloat(await req.loadString());
+  return [latestVer, (latestVer > parseFloat(version) ? true : false)];
+}
+//========================================
+function getRandomNum(){
+  const date = String(new Date()).slice(0, 18);
+  const seed = Array.from(date).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const x = Math.sin(seed+1) * 10000;
+  return Math.floor((x - Math.floor(x)) * (1935)) + 1;
+}
+
+async function showWidget(){
+  const widget = new ListWidget();
+  const latestVer = await checkRequest();
+  
+  const textColor = new Color("#FFFFFF");
+  const shadow = 3;
+  widget.addSpacer(15);
+  const randNum = getRandomNum();
+  const selected = data[randNum-1][0];
+  const num  = widget.addText(` No.${randNum}`);
+  const word = widget.addText(`   ${selected}`);
+  const ans  = widget.addText(" 意味を確認する");
+  num.font = Font.mediumMonospacedSystemFont(15);
+  num.textColor = textColor;
+  num.shadowRadius = shadow;
+  word.font = Font.mediumMonospacedSystemFont(-(5/3)*selected.length + 32);
+  word.textColor = textColor;
+  word.shadowRadius = shadow;
+  ans.font = Font.mediumMonospacedSystemFont(13);
+  ans.textColor = new Color("#B0B0B0");
+  ans.shadowRadius = shadow;
+  
+  const mainStack = widget.addStack();
+  mainStack.size = new Size(140, 90); //バージョン表示域
+
+  const canvas = new DrawContext(); //図形用意
+  const path = new Path();
+  path.addRoundedRect(
+    new Rect(9, 15, 280, 140),
+    30, 30
+  );
+  canvas.size = new Size(300, 170);
+  canvas.opaque = false;
+  canvas.addPath(path);
+  canvas.setFillColor(new Color("#FFFFFF", 0.08));
+  canvas.fillPath();
+  if(latestVer[1]){
+    const badge = new Path(); //通知バッジ
+    badge.addRoundedRect(
+      new Rect(250, 0, 50, 50),
+      25, 25
+    );
+    canvas.addPath(badge);
+    canvas.setFillColor(new Color("#EB4E3D"));
+    canvas.fillPath();
+    canvas.setTextColor(new Color("#FFFFFF"));
+    canvas.setFontSize(40);
+    canvas.drawText("1", new Point(265, 0));
+  }
+  const content = (latestVer[1] ?
+  `新しいバージョンが\nあります。\nLatest version : v${latestVer[0]}` : "バージョンは最新です。");
+  canvas.setTextColor(new Color("#FFFFFF"));
+  canvas.setFontSize(27);
+  canvas.drawText(content, new Point(20, 28));
+  mainStack.addImage(canvas.getImage());
+
+  const gradient = new LinearGradient();
+  gradient.colors = [
+    new Color("#777777"),
+    new Color("#202020")
+  ];
+  gradient.locations = [0, 1];
+  widget.backgroundGradient = gradient;
+  Script.setWidget(widget);
+//   widget.presentSmall();
+  Script.complete();
 }
 
 function getJSON(){
