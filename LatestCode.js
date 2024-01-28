@@ -1,8 +1,8 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: cyan; icon-glyph: language;
-const version = "4.2";
-const date = "12/25/23";
+// icon-color: pink; icon-glyph: book; share-sheet-inputs: plain-text;
+const version = "4.3";
+const date = "01/28/24";
 const containData = true;
 const fullscreen = false;
 /*
@@ -16,29 +16,34 @@ let Input;
 const table = new UITable();
 
 await checkVersion(); //what's new
-Input = [true, String(args.shortcutParameter)]; //ShortCutからの入力
+Input = [0, [String(args.shortcutParameter)]]; //ShortCutからの入力
 if(args.widgetParameter == "leap"){
-  Input = [true, String(getRandomNum())];
+  Input = [0, [String(getRandomNum())]];
 }
 
 if(!config.runsInWidget){ //アプリから実行
   if(Input[1] == "null"){ //string型になってるいるので""が必要
     Input = await MakeAlert(
-      "text",
-      ["検索🔍","番号, 単語, 意味または範囲を入力。\n範囲指定方法(開始, 終了)"],
-      {n1:"OK", n2:"Menu", c3:"Cancel"},
-      ["単語 or 番号...", null]
+      "alert",
+      {
+        title: "検索",
+        message: "番号, 単語, 意味または範囲を入力。\n範囲指定方法(開始, 終了)",
+        act1: "OK",
+        act2: "Menu",
+        can1: "Cancel",
+        txt1: ["単語 or 番号...", null]
+      }
     );
   }
-  console.log(`mode [${Input}]`);
+  console.log(Input);
 } else{ //widgetから実行
   showWidget();
-  Input =  [false, "cancel"];
+  Input =  [-1, [""]];
 }
 
 const IsNum = /^\d+$/;
-if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
-  Input = Input[1].toLowerCase(); //小文字化 & 配列から文字列化
+if(Input[1][0] != ""){ //空白ではない
+  Input = Input[1][0].toLowerCase(); //小文字化 & 配列から文字列化
   //数字
   if(IsNum.test(Input)){
     number(parseInt(Input));
@@ -51,10 +56,15 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
     if(temp){
       const mode = await MakeAlert(
         "sheet",
-        ["表示方法を選択", `No.${start} ~ ${end} の単語を表示します。`],
-        {n1:"すべて表示", n2:"ランダムに問題を出題", c3:"cancel"}, []
+        {
+          title: "表示方法",
+          message: `No.${start} ~ ${end} の単語を表示します。`,
+          act1: "一覧表示",
+          act2: "ランダムにクイズを出題",
+          can1: "Cancel"
+        }
       );
-      switch(mode[1]){
+      switch(mode[0]){
         case 0:
           range(start, end); break;
         case 1:
@@ -69,14 +79,19 @@ if(Input[0] && Input[1] != ""){ //テキスト入力真 & 空白ではない
   } else{
     word(Input);
   }
-} else if(!Input[0] && Input[1] == 1){
+} else if(Input[0] == 1){
   const selected = await MakeAlert(
     "sheet",
-    ["Menu", null],
-    {n1:"アップデートの確認", n2:"バージョン履歴", n3:"アプリの詳細", n4:"使い方を見る", c4:"Cancel"},
-    []
+    {
+      title: "Menu",
+      act1: "アップデートの確認",
+      act2: "バージョン履歴",
+      act3: "アプリ情報",
+      act4: "使い方をみる(ヘルプ)",
+      can1: "Cancel"
+    }
   );
-  switch(selected[1]){
+  switch(selected[0]){
     case 0:
       checkLatestVer();
       break;
@@ -99,8 +114,11 @@ async function CheckRange(num){
   if(num < 1 || num > 1935){
     await MakeAlert(
       "alert",
-      ["⚠️Error", "範囲外の数値です。\n1〜1935の範囲内で指定してください。"],
-      {n1:"OK"}, []
+      {
+        title: "⚠️Error",
+        message: "LEAP範囲外の数値です。\nNo.1〜1935の範囲内で指定してください。",
+        act1: "OK"
+      }
     );
     return false;
   } else {
@@ -249,7 +267,11 @@ async function BtnWeblio(){
       break;
     }
   }
-  mean = mean[1].replace(/ /g, "");
+  let i = 0;
+  while(mean[1][i] == " "){
+    i++;
+  }
+  mean = mean[1].slice(i, ); //初めの空白消去
   mean = mean.replace(/;/g, "/");
   mean = mean.replace(/、/g, "/");
   mean = mean.split("/");
@@ -307,8 +329,8 @@ function QuizReload(mode){
   MakeRow({ic2:[Progress(range, now+1)]},
     [false, false, null], 30, null);
   MakeBlock(RandList[now], data[RandList[now]-1][0], mean, false);
-  MakeRow({bl1:["◀︎Back", 5], br2:["Next▶︎", 6]},
-    [false, false, null], 100, null);
+  MakeRow({bl1:["  ◀︎Back"+" ".repeat(30), 5],  br3:[" ".repeat(30)+"Next▶︎  ", 6]},
+    [false, false, null], 120, null);
   table.reload();
 }
 
@@ -333,41 +355,47 @@ function ChoseFunction(id, word){
 }
 
 //========================================
-async function MakeAlert(mode, message, action, txtValue){
-  let alert = new Alert();
-  alert.title = message[0];
-  alert.message = message[1];
-  for(let item in action){
-    if(action.hasOwnProperty(item)){
-      switch(item[0]){
-        case "n":
-          alert.addAction(action[item]);
-          break;
-        case "c":
-          alert.addCancelAction(action[item]);
-          break;
-        case "d":
-          alert.addDestructiveAction(action[item]);
-          break;
-      } //switch
-    } //if
+async function MakeAlert(mode, content){
+  const alert = new Alert();
+  alert.title = content.title;
+  alert.message = content.message;
+  let txtCount = 0;
+  for(let item in content){
+    const value = content[item];
+    switch(item.slice(0, 3)){
+      case "act":
+        alert.addAction(value);
+        break;
+      case "can":
+        alert.addCancelAction(value);
+        break;
+      case "des":
+        alert.addDestructiveAction(value);
+        break;
+      case "txt":
+        alert.addTextField(value[0], value[1]);
+        txtCount++;
+        break;
+      case "sec":
+        alert.addSecureTextField(value[0], value[1]);
+        txtCount++;
+        break;
+    } //switch
   } //for
   let idx;
-  if(mode == "sheet"){
-    idx = await alert.presentSheet();
-  } else{
-    if(mode == "text"){
-      alert.addTextField(txtValue[0], txtValue[1]);
-    }
-    idx = await alert.presentAlert();
+  switch(mode){
+    case "alert":
+      idx = await alert.presentAlert();
+      break;
+    case "sheet":
+      idx = await alert.presentSheet();
+      break;
   }
-  if(idx == -1){
-    return [false, "cancel"];
-  } else if(idx == 0 && mode == "text"){
-    return [true, alert.textFieldValue(0)];
-  } else{
-    return [false, idx];
+  let input = [];
+  for(let i=0; i<txtCount; i++){
+    input.push(alert.textFieldValue(i));
   }
+  return [idx, input];
 }
 
 function MakeRow(dic, select, height, background){
@@ -428,21 +456,26 @@ function MakeRow(dic, select, height, background){
 
 function MakeBlock(num, word, mean, sep){
   let withNum = [];
+  let isLong = false;
   for(let i=0; i<mean.length; i++){
     if(mean[i]){ // nullではない場合
       withNum.push(mean[i]!="答えを表示" ? `${i+1}, ${mean[i]}` : mean[i]);
+      if(mean[i].length > 26){
+        isLong = true;
+      }
     }
   }
   MakeRow({tl1:[[`No.${num}`, false, null, 19], [null, false, null, 0]]},
     [false, false, null], 10, null);
-  MakeRow({tl1:[[`  ${word}`, true, null, 20], [null, false, null, 0]],
-    bn2:["🔊Speak", 0]},
-    [false, false, null], 50, null);
+  MakeRow({tl1:[[`  ${word}`, true, null, 24], [null, false, null, 0]],
+    bn2:[" 🔊Speak"+" ".repeat(15), 0]},
+    [true, false, null], 60, null);
+  const high = isLong ? (mean.length*30+10) : (mean.length*30);
   MakeRow({tl1:[[null, false, null, 0], [withNum.join("\n"), false, null, 15]]},
-    [mean[0]=="答えを表示", false, 3], mean.length*30, null);
+    [mean[0]=="答えを表示", false, 3], high, null);
   if(sep){
-    MakeRow({tc1:[[null, false, null, 0], ["-".repeat(50), false, "#858585", null]]},
-      [false, false, null], 30, null);
+    MakeRow({tc1:[[null, false, null, 0], ["_".repeat(44), false, "#858585", null]]},
+      [false, false, null], 20, null);
     MakeRow({}, [false, false, null], 30, null);
   }
 }
@@ -493,7 +526,7 @@ function showHelp(){
   for(let item in help){
     if(item != "version"){
       MakeRow({tl1:[[item, true, null, 20], [help[item], false, null, 14]]},
-        [true, false, null], help[item].length + 90, null);
+        [true, false, null], help[item].length + 100, null);
     }
   }
   table.showSeparators = true;
@@ -504,9 +537,11 @@ async function checkVersion(){
   const firstRunKey = `version${version}`;  //使用済みのキー
   if(!Keychain.contains(firstRunKey)) {
     const newThing = [
-    "✔︎ Menuにアプリ詳細画面を追加しました。",
-    "✔︎ ホームのwidgetからバージョンと、ランダムな単語を確認できるようになりました。\nparameterには小文字半角で「leap」と入力してください。",
-    "✔︎ その他マイナーなアップデート。"];
+      "✔︎ weblioからの検索で空白が表示されないバグの修正。",
+      "✔︎ 長文の表示が見切れるバグの修正。",
+      "✔︎ next,backボタンの反応する範囲の拡大。",
+      "✔︎ その他マイナーなコードアップデート。"
+    ];
     MakeRow({tl1:[["What's New✨", true, null, 40], [null, false, null, 10]]},
       [false, false, null], 60, null);
     for(let item of newThing){
@@ -550,18 +585,18 @@ async function versionHis(){
 
 async function showDetail(){
   const detail = {
-    "App Version":version,
-    "Updated day":date,
-    "LEAP data included":containData,
-    "Size":`${await FileManager.local().fileSize(module.filename)} KB`,
-    "Length of code":`${
+    "App Version": version,
+    "Updated day": date,
+    "LEAP data included": containData,
+    "Size": `${await FileManager.local().fileSize(module.filename)} KB`,
+    "Length of code": `${
       (await FileManager.local().readString(module.filename)).length
     } characters`
-  }
+  };
   for(let item in detail){
     MakeRow({tl1:[[item, true, null, 17], [null, false, null, 0]],
       tr2:[[`${detail[item]}`, false, null, 17], [null, false, null, 0]]},
-      [false, false, null], 50, null);
+      [true, false, null], 55, null);
   }
   table.showSeparators = true;
   table.present(false);
@@ -573,30 +608,43 @@ async function checkLatestVer(){
   if(latestVer[1]){
     let acceptUpdate = await MakeAlert(
       "alert",
-      ["新しいバージョンがあります!", `新しいバージョン: v${latestVer[0]}\n今すぐアップデートしますか？\nアップデートは数秒で終わります。`],
-      {n1:"今すぐアップデート", n2:"後で"}, []
+      {
+        title: "新しいバージョンがあります!",
+        message: `新しいバージョン: ${latestVer[0]}\n今すぐアップデートしますか？\n(予想時間: 数秒)`,
+        act1: "今すぐアップデート",
+        act2: "あとで"
+      }
     );
     if(acceptUpdate[1] == 0){
       await MakeAlert(
         "alert",
-        ["", "インターネットに接続してください。\n途中で接続を切ったりアプリを閉じたりしないでください。"],
-        {n1:"OK"}, []
+        {
+          title: "",
+          message: "インターネットに接続してください。\n途中で接続を切ったりアプリを閉じたりしないでください。",
+          act1: "OK"
+        }
       );
       const codeUrl = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestCode.js";
       const codeData = new Request(codeUrl);
       const codeString = await codeData.loadString();
-      fm.writeString(module.filename, codeString);
+      //fm.writeString("LEAP", codeString);
       await MakeAlert(
         "alert",
-        ["アップデートが正常に行われました。", `バージョン: ${latestVer[0]}\nコードを開いている場合は閉じてください。`],
-        {c1:"OK"}, []
+        {
+          title: "アップデートが正常に行われました。",
+          message: `バージョン: ${latestVer[0]}\nコードを開いている場合は閉じてください。`,
+          can1: "OK"
+        }
       );
     }
   } else{
     await MakeAlert(
       "alert",
-      ["バージョンは最新です。", `バージョン: ${version}`],
-      {c1:"OK"}, []
+      {
+        title: "バージョンは最新です。",
+        message: `使用中のバージョン: ${version}`,
+        can1: "OK"
+      }
     );
   }
 }
@@ -628,7 +676,7 @@ async function showWidget(){
   const selected = data[randNum-1][0];
   const num  = widget.addText(` No.${randNum}`);
   const word = widget.addText(`   ${selected}`);
-  const ans  = widget.addText(" 意味を確認する");
+  const ans  = widget.addText("  ▶︎意味を確認する");
   num.font = Font.mediumMonospacedSystemFont(15);
   num.textColor = textColor;
   num.shadowRadius = shadow;
@@ -675,13 +723,12 @@ async function showWidget(){
 
   const gradient = new LinearGradient();
   gradient.colors = [
-    new Color("#777777"),
-    new Color("#202020")
+    new Color("#7788BB"),
+    new Color("#333455")
   ];
   gradient.locations = [0, 1];
   widget.backgroundGradient = gradient;
   Script.setWidget(widget);
-//   widget.presentSmall();
   Script.complete();
 }
 
