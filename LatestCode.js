@@ -627,7 +627,7 @@ async function checkLatestVer(){
       const codeUrl = "https://raw.githubusercontent.com/AtomS1101/LEAPnewCode_public/main/LatestCode.js";
       const codeData = new Request(codeUrl);
       const codeString = await codeData.loadString();
-      //fm.writeString("LEAP", codeString);
+      fm.writeString(module.filename, codeString);
       await MakeAlert(
         "alert",
         {
