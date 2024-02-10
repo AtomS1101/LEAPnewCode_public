@@ -1,7 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: pink; icon-glyph: book; share-sheet-inputs: plain-text;
-const version = "4.3";
+const version = "4.2";
 const date = "01/28/24";
 const containData = true;
 const fullscreen = false;
